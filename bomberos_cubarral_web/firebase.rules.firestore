@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.role == "admin";
+    }
+
+    // Noticias públicas: lectura libre, escritura solo administradores.
+    match /news/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Certificados publicados para consulta pública.
+    // Solo guardar aquí información verificación-safe.
+    match /certificates_public/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Solicitudes de inspección.
+    // Para máxima privacidad, aquí solo escritura pública; lectura exclusiva admin.
+    match /inspection_requests/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Bloqueo por defecto.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
